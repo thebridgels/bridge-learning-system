@@ -7,6 +7,7 @@ import { gatherAnalysisInput, AnalysisInputError } from "@/lib/bridge-analysis/g
 import { analyzeMaterial } from "@/lib/bridge-analysis/provider";
 import type { BridgeAnalysisResult } from "@/lib/bridge-analysis/schema";
 import { generateVersions, GenerationInputError } from "@/lib/bridge-generation/generate";
+import { recordGenerationDocumentation, type StudentRoute } from "@/lib/documentation";
 
 const ANALYSES_PER_HOUR = 20;
 const GENERATIONS_PER_HOUR = 20;
@@ -153,6 +154,8 @@ export async function runGeneration(formData: FormData) {
     fail(id, message);
   }
 
+  const studentRoutes: StudentRoute[] = [];
+
   for (const version of versions) {
     const { data: generated, error: insertError } = await supabase
       .from("generated_materials")
@@ -187,10 +190,83 @@ export async function runGeneration(formData: FormData) {
       await supabase.from("adaptation_requests").update({ status: "failed" }).eq("id", id).eq("teacher_id", user.id);
       fail(id, routeError.message);
     }
+
+    for (const s of version.students) {
+      studentRoutes.push({ id: s.id, alias: s.alias, generatedMaterialId: generated.id });
+    }
+  }
+
+  try {
+    await recordGenerationDocumentation(supabase, {
+      teacherId: user.id,
+      sourceMaterialId: request.source_material_id,
+      title: material.title,
+      analysis: request.analysis as BridgeAnalysisResult,
+      studentRoutes,
+    });
+  } catch (err) {
+    console.error("Documentation recording failed for adaptation request", id, err instanceof Error ? err.message : err);
+    await supabase.from("adaptation_requests").update({ status: "failed" }).eq("id", id).eq("teacher_id", user.id);
+    fail(id, "Generated materials were saved, but documentation could not be recorded. Try again.");
   }
 
   await supabase.from("adaptation_requests").update({ status: "generated" }).eq("id", id).eq("teacher_id", user.id);
 
   revalidatePath(`/adaptation-requests/${id}`);
   redirect(`/adaptation-requests/${id}`);
+}
+
+export async function confirmSupport(formData: FormData) {
+  const adaptationRequestId = String(formData.get("adaptation_request_id") ?? "");
+  const documentationEventId = String(formData.get("documentation_event_id") ?? "");
+  const wordingSnapshot = String(formData.get("wording_snapshot") ?? "");
+  const supportType = String(formData.get("support_type") ?? "accommodation");
+  if (!adaptationRequestId || !documentationEventId || !wordingSnapshot) redirect("/dashboard");
+
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) redirect("/login");
+
+  const { error } = await supabase.from("documentation_event_supports").upsert(
+    {
+      teacher_id: user.id,
+      documentation_event_id: documentationEventId,
+      wording_snapshot: wordingSnapshot,
+      support_type: supportType,
+      teacher_confirmed: true,
+    },
+    { onConflict: "documentation_event_id,wording_snapshot" },
+  );
+  if (error) fail(adaptationRequestId, error.message);
+
+  revalidatePath(`/adaptation-requests/${adaptationRequestId}`);
+  redirect(`/adaptation-requests/${adaptationRequestId}`);
+}
+
+export async function unconfirmSupport(formData: FormData) {
+  const adaptationRequestId = String(formData.get("adaptation_request_id") ?? "");
+  const documentationEventId = String(formData.get("documentation_event_id") ?? "");
+  const wordingSnapshot = String(formData.get("wording_snapshot") ?? "");
+  if (!adaptationRequestId || !documentationEventId || !wordingSnapshot) redirect("/dashboard");
+
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) redirect("/login");
+
+  // Never touch a system-applied record — this can only remove a
+  // teacher-confirmed-only row.
+  await supabase
+    .from("documentation_event_supports")
+    .delete()
+    .eq("teacher_id", user.id)
+    .eq("documentation_event_id", documentationEventId)
+    .eq("wording_snapshot", wordingSnapshot)
+    .eq("system_applied", false);
+
+  revalidatePath(`/adaptation-requests/${adaptationRequestId}`);
+  redirect(`/adaptation-requests/${adaptationRequestId}`);
 }

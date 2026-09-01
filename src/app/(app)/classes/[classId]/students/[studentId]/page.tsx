@@ -81,13 +81,18 @@ export default async function StudentPage(
           <h1 className="text-2xl font-semibold">{student.alias}</h1>
           <p className="text-xs text-gray-500">{classAlias}</p>
         </div>
-        <form action={regenerateStudentAlias}>
-          <input type="hidden" name="class_id" value={classId} />
-          <input type="hidden" name="student_id" value={studentId} />
-          <button type="submit" className="text-sm underline">
-            Regenerate alias
-          </button>
-        </form>
+        <div className="flex items-center gap-4">
+          <Link href={`/reports?scope=student&student_id=${studentId}`} className="text-sm underline">
+            Documentation
+          </Link>
+          <form action={regenerateStudentAlias}>
+            <input type="hidden" name="class_id" value={classId} />
+            <input type="hidden" name="student_id" value={studentId} />
+            <button type="submit" className="text-sm underline">
+              Regenerate alias
+            </button>
+          </form>
+        </div>
       </div>
 
       <section className="space-y-3">

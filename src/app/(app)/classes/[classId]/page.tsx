@@ -48,12 +48,17 @@ export default async function ClassPage(props: PageProps<"/classes/[classId]">) 
           <h1 className="text-2xl font-semibold">{klass.alias}</h1>
           <p className="text-xs text-gray-500">{klass.school_year}</p>
         </div>
-        <form action={regenerateClassAlias}>
-          <input type="hidden" name="class_id" value={klass.id} />
-          <button type="submit" className="text-sm underline">
-            Regenerate alias
-          </button>
-        </form>
+        <div className="flex items-center gap-4">
+          <Link href={`/reports?scope=class&class_id=${klass.id}`} className="text-sm underline">
+            Documentation
+          </Link>
+          <form action={regenerateClassAlias}>
+            <input type="hidden" name="class_id" value={klass.id} />
+            <button type="submit" className="text-sm underline">
+              Regenerate alias
+            </button>
+          </form>
+        </div>
       </div>
 
       <section className="space-y-3">

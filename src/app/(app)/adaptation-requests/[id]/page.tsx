@@ -2,7 +2,8 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import type { BridgeAnalysisResult } from "@/lib/bridge-analysis/schema";
-import { runBridgeAnalysis, runGeneration } from "./actions";
+import { teacherConfirmableCandidates } from "@/lib/documentation";
+import { runBridgeAnalysis, runGeneration, confirmSupport, unconfirmSupport } from "./actions";
 
 const KIND_LABELS: Record<string, string> = {
   lesson_plan: "Lesson Plan",
@@ -68,6 +69,25 @@ export default async function AdaptationRequestPage(
           .eq("adaptation_request_id", id)
           .eq("teacher_id", user.id)
           .order("created_at", { ascending: true })
+      : { data: null };
+
+  const roster = (generatedMaterials ?? []).flatMap((gm) =>
+    (gm.material_student_routes ?? [])
+      .map((r) => r.students as unknown as { id: string; alias: string } | null)
+      .filter((s): s is { id: string; alias: string } => s !== null)
+      .map((s) => ({ ...s, generatedMaterialId: gm.id })),
+  );
+
+  const generatedMaterialIds = roster.map((s) => s.generatedMaterialId);
+  const { data: docEvents } =
+    generatedMaterialIds.length > 0
+      ? await supabase
+          .from("documentation_events")
+          .select(
+            "id, student_id, generated_material_id, documentation_event_supports(wording_snapshot, support_type, system_applied, teacher_confirmed)",
+          )
+          .eq("teacher_id", user.id)
+          .in("generated_material_id", generatedMaterialIds)
       : { data: null };
 
   return (
@@ -318,6 +338,75 @@ export default async function AdaptationRequestPage(
                         </li>
                       ))}
                     </ul>
+                  )}
+                </li>
+              );
+            })}
+          </ul>
+        </section>
+      )}
+
+      {request.status === "generated" && analysis && roster.length > 0 && (
+        <section className="space-y-3">
+          <h2 className="text-lg font-medium">Documentation</h2>
+          <ul className="space-y-3">
+            {roster.map((student) => {
+              const event = (docEvents ?? []).find(
+                (e) => e.student_id === student.id && e.generated_material_id === student.generatedMaterialId,
+              );
+              const supports = event?.documentation_event_supports ?? [];
+              const systemApplied = supports.filter((s) => s.system_applied);
+              const confirmedWording = new Set(
+                supports.filter((s) => s.teacher_confirmed).map((s) => s.wording_snapshot),
+              );
+              const candidates = teacherConfirmableCandidates(analysis, student.alias);
+
+              if (!event) return null;
+
+              return (
+                <li
+                  key={student.id}
+                  className="space-y-2 rounded-md border border-gray-200 p-3 text-sm dark:border-gray-800"
+                >
+                  <p className="font-medium">{student.alias}</p>
+
+                  {systemApplied.length > 0 && (
+                    <ul className="space-y-1">
+                      {systemApplied.map((s) => (
+                        <li key={s.wording_snapshot} className="flex items-center gap-2 text-gray-600 dark:text-gray-400">
+                          <span aria-hidden>✅</span>
+                          <span>{s.wording_snapshot}</span>
+                          <span className="text-xs text-gray-500">(Bridge applied)</span>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+
+                  {candidates.length > 0 && (
+                    <ul className="space-y-1">
+                      {candidates.map((c) => {
+                        const wording = c.sourceWording ?? c.support;
+                        const checked = confirmedWording.has(wording);
+                        return (
+                          <li key={wording}>
+                            <form action={checked ? unconfirmSupport : confirmSupport} className="flex items-center gap-2">
+                              <input type="hidden" name="adaptation_request_id" value={id} />
+                              <input type="hidden" name="documentation_event_id" value={event.id} />
+                              <input type="hidden" name="wording_snapshot" value={wording} />
+                              <input type="hidden" name="support_type" value={c.supportType} />
+                              <button type="submit" className="flex items-center gap-2 text-left hover:underline">
+                                <span aria-hidden>{checked ? "☑" : "☐"}</span>
+                                <span className="text-gray-600 dark:text-gray-400">{wording}</span>
+                              </button>
+                            </form>
+                          </li>
+                        );
+                      })}
+                    </ul>
+                  )}
+
+                  {systemApplied.length === 0 && candidates.length === 0 && (
+                    <p className="text-xs text-gray-500">No supports recorded for this event.</p>
                   )}
                 </li>
               );
