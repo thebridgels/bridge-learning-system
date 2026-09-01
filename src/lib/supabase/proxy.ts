@@ -1,7 +1,10 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
-const PUBLIC_ROUTES = ["/login", "/signup", "/forgot-password"];
+// Public self-registration is disabled for beta — /signup is intentionally
+// left out here; it always redirects to /login via its own page component,
+// regardless of auth state.
+const PUBLIC_ROUTES = ["/login", "/forgot-password"];
 // Password-recovery routes must work regardless of whether a normal session
 // cookie is already present (e.g. requesting a reset while logged in on the
 // same browser), so they're exempt from both redirect rules below.

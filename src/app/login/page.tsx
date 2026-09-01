@@ -64,13 +64,6 @@ export default async function LoginPage(props: PageProps<"/login">) {
           Log in
         </SubmitButton>
       </form>
-
-      <p className="text-sm text-gray-600 dark:text-gray-400">
-        Need an account?{" "}
-        <Link href="/signup" className="underline">
-          Sign up
-        </Link>
-      </p>
     </main>
   );
 }
