@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { SubmitButton } from "@/components/submit-button";
 import { login } from "./actions";
 
 export default async function LoginPage(props: PageProps<"/login">) {
@@ -39,9 +40,14 @@ export default async function LoginPage(props: PageProps<"/login">) {
           />
         </div>
         <div className="space-y-1">
-          <label htmlFor="password" className="block text-sm font-medium">
-            Password
-          </label>
+          <div className="flex items-center justify-between">
+            <label htmlFor="password" className="block text-sm font-medium">
+              Password
+            </label>
+            <Link href="/forgot-password" className="text-xs underline">
+              Forgot password?
+            </Link>
+          </div>
           <input
             id="password"
             name="password"
@@ -51,12 +57,12 @@ export default async function LoginPage(props: PageProps<"/login">) {
             className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm dark:border-gray-700 dark:bg-gray-900"
           />
         </div>
-        <button
-          type="submit"
-          className="w-full rounded-md bg-gray-900 px-4 py-2 text-sm font-medium text-white hover:bg-gray-700 dark:bg-gray-100 dark:text-gray-900 dark:hover:bg-gray-300"
+        <SubmitButton
+          pendingText="Logging in…"
+          className="w-full rounded-md bg-gray-900 px-4 py-2 text-sm font-medium text-white hover:bg-gray-700 disabled:cursor-not-allowed disabled:opacity-60 dark:bg-gray-100 dark:text-gray-900 dark:hover:bg-gray-300"
         >
           Log in
-        </button>
+        </SubmitButton>
       </form>
 
       <p className="text-sm text-gray-600 dark:text-gray-400">

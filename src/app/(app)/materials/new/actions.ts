@@ -8,6 +8,7 @@ import { extractText } from "@/lib/text-extraction";
 
 const SCOPE_TYPES = ["all_students", "class", "selected_students"] as const;
 const MAX_PASTED_TEXT = 50000;
+const EXTRACTIONS_PER_HOUR = 30;
 
 function fail(kind: string, message: string): never {
   redirect(`/materials/new?kind=${encodeURIComponent(kind)}&error=${encodeURIComponent(message)}`);
@@ -72,6 +73,17 @@ export async function createAdaptationRequest(formData: FormData) {
       const extension = ALLOWED_UPLOAD_TYPES[uploadFile.type];
       if (!extension) {
         fail(kind, "Unsupported file type. Upload a PDF, DOCX, or image.");
+      }
+
+      const since = new Date(Date.now() - 60 * 60 * 1000).toISOString();
+      const { count } = await supabase
+        .from("source_materials")
+        .select("id", { count: "exact", head: true })
+        .eq("teacher_id", user.id)
+        .not("extraction_status", "is", null)
+        .gte("created_at", since);
+      if ((count ?? 0) >= EXTRACTIONS_PER_HOUR) {
+        fail(kind, "File upload rate limit reached for this hour. Try again later, or paste text instead.");
       }
 
       const safeName = sanitizeFilename(uploadFile.name);

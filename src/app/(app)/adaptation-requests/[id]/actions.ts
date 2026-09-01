@@ -199,6 +199,7 @@ export async function runGeneration(formData: FormData) {
   try {
     await recordGenerationDocumentation(supabase, {
       teacherId: user.id,
+      adaptationRequestId: id,
       sourceMaterialId: request.source_material_id,
       title: material.title,
       analysis: request.analysis as BridgeAnalysisResult,

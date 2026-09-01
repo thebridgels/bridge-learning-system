@@ -23,15 +23,19 @@ export function teacherConfirmableCandidates(
 }
 
 /**
- * Creates/updates one documentation_event per in-scope student plus
- * documentation_event_supports rows for the system-applied supports Bridge
- * actually embedded for them. Idempotent — safe to call again for the same
- * (teacher, student, generated_material) after a regeneration.
+ * Creates/updates one documentation_event per in-scope student, keyed on
+ * (teacher, student, adaptation_request) — stable across regenerations of
+ * the same request, so re-analyzing/regenerating updates the existing event
+ * instead of creating a duplicate for what is really the same lesson/
+ * assignment event. System-applied support rows are replaced to match the
+ * latest analysis; teacher-confirmed rows (real-world confirmations) are
+ * left untouched by a regeneration.
  */
 export async function recordGenerationDocumentation(
   supabase: SupabaseClient,
   params: {
     teacherId: string;
+    adaptationRequestId: string;
     sourceMaterialId: string;
     title: string;
     analysis: BridgeAnalysisResult;
@@ -45,11 +49,12 @@ export async function recordGenerationDocumentation(
         {
           teacher_id: params.teacherId,
           student_id: student.id,
+          adaptation_request_id: params.adaptationRequestId,
           source_material_id: params.sourceMaterialId,
           generated_material_id: student.generatedMaterialId,
           title: params.title,
         },
-        { onConflict: "teacher_id,student_id,generated_material_id" },
+        { onConflict: "teacher_id,student_id,adaptation_request_id" },
       )
       .select("id")
       .single();
@@ -57,6 +62,16 @@ export async function recordGenerationDocumentation(
     if (error || !event) {
       throw new Error(error?.message ?? "Could not create documentation event.");
     }
+
+    // Replace system-applied supports to match the latest analysis; a
+    // support relevant in a prior generation but not this one shouldn't
+    // linger. Teacher-confirmed rows are untouched here.
+    const { error: clearError } = await supabase
+      .from("documentation_event_supports")
+      .delete()
+      .eq("documentation_event_id", event.id)
+      .eq("system_applied", true);
+    if (clearError) throw new Error(clearError.message);
 
     const systemApplied = relevantSupports(params.analysis.plannedSupports, student.alias, "system_applied");
     if (systemApplied.length === 0) continue;

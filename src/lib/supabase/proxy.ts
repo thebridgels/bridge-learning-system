@@ -1,7 +1,11 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
-const PUBLIC_ROUTES = ["/login", "/signup"];
+const PUBLIC_ROUTES = ["/login", "/signup", "/forgot-password"];
+// Password-recovery routes must work regardless of whether a normal session
+// cookie is already present (e.g. requesting a reset while logged in on the
+// same browser), so they're exempt from both redirect rules below.
+const ALWAYS_ALLOWED_ROUTES = ["/reset-password", "/auth/confirm"];
 
 export async function updateSession(request: NextRequest) {
   let response = NextResponse.next({ request });
@@ -34,6 +38,13 @@ export async function updateSession(request: NextRequest) {
   const isPublicRoute = PUBLIC_ROUTES.some((route) =>
     request.nextUrl.pathname.startsWith(route),
   );
+  const isAlwaysAllowed = ALWAYS_ALLOWED_ROUTES.some((route) =>
+    request.nextUrl.pathname.startsWith(route),
+  );
+
+  if (isAlwaysAllowed) {
+    return response;
+  }
 
   if (!user && !isPublicRoute) {
     const loginUrl = new URL("/login", request.url);

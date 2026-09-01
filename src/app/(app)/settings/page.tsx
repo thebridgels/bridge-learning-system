@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import { updateProfile, updatePassword } from "./actions";
@@ -108,18 +109,24 @@ export default async function SettingsPage(props: PageProps<"/settings">) {
         <h2 className="text-lg font-medium">Data &amp; deletion</h2>
         <p className="text-sm text-gray-600 dark:text-gray-400">
           Student-linked records (classes, students, accommodations, language
-          profiles, generated materials, documentation) are automatically
-          deleted at school-year end. Export options will be available before
-          deletion runs.
+          profiles, generated materials, documentation) may exist for no more
+          than one school year. Print or download your reports first, then
+          purge when you&rsquo;re ready to start a new year.
         </p>
+        <Link href="/settings/purge" className="text-sm text-red-700 underline dark:text-red-400">
+          Purge student data for a new school year
+        </Link>
       </section>
 
       <section className="space-y-2">
         <h2 className="text-lg font-medium">Delete account</h2>
         <p className="text-sm text-gray-600 dark:text-gray-400">
-          Account deletion is not yet available in this beta. Contact support
-          to request account deletion.
+          Permanently deletes all your classes, students, materials, and
+          accommodation library. This cannot be undone.
         </p>
+        <Link href="/settings/delete-account" className="text-sm text-red-700 underline dark:text-red-400">
+          Delete account
+        </Link>
       </section>
     </div>
   );

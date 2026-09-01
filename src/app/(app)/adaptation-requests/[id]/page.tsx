@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import type { BridgeAnalysisResult } from "@/lib/bridge-analysis/schema";
 import { teacherConfirmableCandidates } from "@/lib/documentation";
+import { SubmitButton } from "@/components/submit-button";
 import { runBridgeAnalysis, runGeneration, confirmSupport, unconfirmSupport } from "./actions";
 
 const KIND_LABELS: Record<string, string> = {
@@ -130,12 +131,12 @@ export default async function AdaptationRequestPage(
       {canAnalyze && (
         <form action={runBridgeAnalysis}>
           <input type="hidden" name="adaptation_request_id" value={request.id} />
-          <button
-            type="submit"
-            className="rounded-md bg-gray-900 px-4 py-2 text-sm font-medium text-white hover:bg-gray-700 dark:bg-gray-100 dark:text-gray-900 dark:hover:bg-gray-300"
+          <SubmitButton
+            pendingText="Analyzing…"
+            className="rounded-md bg-gray-900 px-4 py-2 text-sm font-medium text-white hover:bg-gray-700 disabled:cursor-not-allowed disabled:opacity-60 dark:bg-gray-100 dark:text-gray-900 dark:hover:bg-gray-300"
           >
             {analysis ? "Re-run Bridge Analysis" : "Run Bridge Analysis"}
-          </button>
+          </SubmitButton>
         </form>
       )}
 
@@ -259,12 +260,12 @@ export default async function AdaptationRequestPage(
             {canGenerate && (
               <form action={runGeneration}>
                 <input type="hidden" name="adaptation_request_id" value={request.id} />
-                <button
-                  type="submit"
-                  className="rounded-md bg-gray-900 px-4 py-2 text-sm font-medium text-white hover:bg-gray-700 dark:bg-gray-100 dark:text-gray-900 dark:hover:bg-gray-300"
+                <SubmitButton
+                  pendingText="Generating…"
+                  className="rounded-md bg-gray-900 px-4 py-2 text-sm font-medium text-white hover:bg-gray-700 disabled:cursor-not-allowed disabled:opacity-60 dark:bg-gray-100 dark:text-gray-900 dark:hover:bg-gray-300"
                 >
                   {request.status === "failed" ? "Retry Generate" : "Generate"}
-                </button>
+                </SubmitButton>
               </form>
             )}
             {request.status === "generating" && (

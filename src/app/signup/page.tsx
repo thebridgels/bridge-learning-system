@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { SubmitButton } from "@/components/submit-button";
 import { signup } from "./actions";
 
 export default async function SignupPage(props: PageProps<"/signup">) {
@@ -47,12 +48,12 @@ export default async function SignupPage(props: PageProps<"/signup">) {
             className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm dark:border-gray-700 dark:bg-gray-900"
           />
         </div>
-        <button
-          type="submit"
-          className="w-full rounded-md bg-gray-900 px-4 py-2 text-sm font-medium text-white hover:bg-gray-700 dark:bg-gray-100 dark:text-gray-900 dark:hover:bg-gray-300"
+        <SubmitButton
+          pendingText="Signing up…"
+          className="w-full rounded-md bg-gray-900 px-4 py-2 text-sm font-medium text-white hover:bg-gray-700 disabled:cursor-not-allowed disabled:opacity-60 dark:bg-gray-100 dark:text-gray-900 dark:hover:bg-gray-300"
         >
           Sign up
-        </button>
+        </SubmitButton>
       </form>
 
       <p className="text-sm text-gray-600 dark:text-gray-400">

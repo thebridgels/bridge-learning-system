@@ -39,6 +39,11 @@ export async function updatePassword(formData: FormData) {
   }
 
   const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) redirect("/login");
+
   const { error } = await supabase.auth.updateUser({ password });
   if (error) fail(error.message);
 
